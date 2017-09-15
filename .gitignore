@@ -1,0 +1,6 @@
+.idea/
+README
+__pycache__/
+armies/
+*.xlsx
+possible_armies_*
