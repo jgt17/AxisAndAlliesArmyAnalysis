@@ -1,6 +1,6 @@
 .idea/
-README
 __pycache__/
 armies/
+results_*/
 *.xlsx
 possible_armies_*

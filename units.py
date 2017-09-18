@@ -28,7 +28,7 @@ class Units(Enum):
     # unique)
 
     AA_GUN = (5, 0, 1, False, False, 1, -1, UnitTypes.LAND,
-              (UnitTypes.AIR), True, False, False, True, True, True)
+              (UnitTypes.AIR,), True, False, False, True, True, True)
 
     INFANTRY = (3, 1, 2, True, False, 1, 1, UnitTypes.LAND,
                 (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False)
@@ -83,7 +83,7 @@ class Units(Enum):
     def get_attackable_types(self):
         return self.value[8]
 
-    def is_first_strike(self):
+    def has_first_strike(self):
         return self.value[9]
 
     def prevents_first_strike(self):

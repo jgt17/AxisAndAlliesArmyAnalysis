@@ -2,15 +2,16 @@ import pickle
 import os
 
 from units import Units
-from config import attacker_available_money, defender_available_money, is_land_battle
 from config import land_battle_units, sea_battle_units
 
 
 # generate all the possible armies with the money available
-def generate_possible_armies(*allowed_unit_types, prohibited_units=(), use_all_money=True, attacking=True):
+def generate_possible_armies(money, *allowed_unit_types, prohibited_units=(), land_battle=True, use_all_money=True):
+    if (money > 400 and land_battle) or (money > 500 and not land_battle):
+        raise Exception("Too many possibilities to compute.")
     # default land battle
     if not allowed_unit_types:
-        allowed_unit_types = land_battle_units if is_land_battle else sea_battle_units
+        allowed_unit_types = land_battle_units if land_battle else sea_battle_units
 
     # get list of permitted units
     allowed_units = [unit for unit in list(Units)
@@ -53,7 +54,7 @@ def generate_possible_armies(*allowed_unit_types, prohibited_units=(), use_all_m
             finished_set.add(current_resources)
 
     empty_army = (0,)*len(allowed_units)
-    working_set.add(empty_army + (attacker_available_money if attacking else defender_available_money,))
+    working_set.add(empty_army + (money,))
 
     # generate all the armies
     i = 0
@@ -61,7 +62,7 @@ def generate_possible_armies(*allowed_unit_types, prohibited_units=(), use_all_m
         configuration = working_set.pop()
         generate_next_armies(configuration)
         if i % 100000 == 0:
-            print(str(attacker_available_money if attacking else defender_available_money) + "  "
+            print(str(money) + "  "
                   + str(len(working_set)) + "  " + str(len(finished_set)))
         i += 1
 
@@ -81,36 +82,56 @@ def generate_possible_armies(*allowed_unit_types, prohibited_units=(), use_all_m
 
 
 # generate list of armies and save it for future use
-def generate_and_save_possible_armies(*allowed_unit_types, prohibited_units=(), use_all_money=True, attacking=True):
+def generate_and_save_possible_armies(money, *allowed_unit_types, prohibited_units=(), land_battle, use_all_money=True):
     if not os.path.isdir("armies"):
         os.mkdir("armies")
-    with open(get_filename_from_config(use_all_money, attacking), "wb") as saveLoc:
-        pickle.dump(generate_possible_armies(*allowed_unit_types,
-                                             prohibited_units=prohibited_units, use_all_money=use_all_money),
-                    saveLoc)
+    armies = generate_possible_armies(money,
+                                      *allowed_unit_types,
+                                      prohibited_units=prohibited_units,
+                                      land_battle=land_battle,
+                                      use_all_money=use_all_money)
+    with open(get_filename(money, land_battle, use_all_money), "wb") as saveLoc:
+        pickle.dump(armies, saveLoc)
+    return armies
 
 
 # get the filename of possible armies for a certain config
-def get_filename_from_config(use_all_money=True, attacking=True):
-    return "armies/possible_armies_" + str(attacker_available_money if attacking else defender_available_money) + \
-           ("_land" if is_land_battle else "_sea") + ("_leftover_money_allowed" if not use_all_money else "")
+def get_filename(money, land_battle, use_all_money=True):
+    return "armies/possible_armies_" + str(money) + \
+           ("_land" if land_battle else "_sea") + ("_leftover_money_allowed" if not use_all_money else "")
+
+
+# load the possible armies from a file if it exists, otherwise generate the armies, save it, and load it
+def get_possible_armies(money, land_battle, use_all_money=True):
+    filename = get_filename(money, land_battle, use_all_money)
+    if os.path.isfile(filename):
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
+    else:
+        print("Generating Armies")
+        return generate_and_save_possible_armies(money, land_battle=land_battle, use_all_money=use_all_money)
+
+
+# generate common possible armies
+def generate_and_save_armies_for_common_money_amounts():
+    land_battle = True
+    money = 10
+    if not os.path.isfile(get_filename(money, land_battle)):
+        generate_and_save_possible_armies(money, land_battle=land_battle)
+    for i in range(50, 400, 50):
+        attacker_available_money = i
+        if not os.path.isfile(get_filename(money, land_battle)):
+            generate_and_save_possible_armies(money, land_battle=land_battle)
+
+    land_battle = False
+    money = 10
+    if not os.path.isfile(get_filename(money, land_battle)):
+        generate_and_save_possible_armies(money, land_battle=land_battle)
+    for i in range(50, 600, 50):
+        attacker_available_money = i
+        if not os.path.isfile(get_filename(money, land_battle)):
+            generate_and_save_possible_armies(money, land_battle=land_battle)
 
 
 if __name__ == "__main__":
-    is_land_battle = True
-    attacker_available_money = 10
-    if not os.path.isfile(get_filename_from_config()):
-        generate_and_save_possible_armies()
-    for i in range(50, 600, 50):
-        attacker_available_money = i
-        if not os.path.isfile(get_filename_from_config()):
-            generate_and_save_possible_armies()
-
-    is_land_battle = False
-    attacker_available_money = 10
-    if not os.path.isfile(get_filename_from_config()):
-        generate_and_save_possible_armies()
-    for i in range(50, 600, 50):
-        attacker_available_money = i
-        if not os.path.isfile(get_filename_from_config()):
-            generate_and_save_possible_armies()
+    generate_and_save_armies_for_common_money_amounts()

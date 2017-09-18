@@ -14,9 +14,11 @@ retreat_when_only_air_left = False
 attacking_land_must_survive = True
 is_land_battle = True
 
-low_luck = False
+low_luck = True
+
+use_all_available_money = True
 
 # low values for debugging
 attacker_available_money = 10
 defender_available_money = attacker_available_money
-battle_simulation_count = 10
+battle_simulation_count = 500
