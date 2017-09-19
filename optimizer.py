@@ -14,7 +14,7 @@ from army_generator import get_possible_armies
 
 # get total unit value of an army
 def get_tuv(army):
-    return sum(unit.get_cost()*count for unit, count in army.items() if unit in Units)
+    return sum(unit.get_base_unit().get_cost()*count for unit, count in army.items() if unit in Units)
 
 
 # roll a bunch of dice
@@ -35,25 +35,33 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
         power = Units.get_defense
 
     # if first strike should be applied
-    if is_attacking and is_first_strike and\
-            all((unit.prevents_first_strike() and count > 0) for unit, count in receiving_army.items()):
-        rolling_army = rolling_army.copy()
-        for unit in rolling_army:
-            if unit.has_first_strike():
-                del rolling_army[unit]
+    if is_attacking and is_first_strike:
+        if all(not (unit.prevents_first_strike() and count > 0)
+               for unit, count in receiving_army.items() if unit in Units):
+            striking_army = dict()
+            for unit in rolling_army:
+                if unit in Units and unit.has_first_strike():
+                    striking_army[unit] = rolling_army[unit]
+            rolling_army = striking_army
+        else:
+            return dict()
     # if first strike should not be applied
     elif is_attacking and not is_first_strike and \
-            all((unit.prevents_first_strike() and count > 0) for unit, count in receiving_army.items()):
-        rolling_army = rolling_army.copy()
+            all(not (unit.prevents_first_strike() and count > 0)
+                for unit, count in receiving_army.items() if unit in Units):
+        non_striking_army = dict()
         for unit in rolling_army:
-            if not unit.has_first_strike():
-                del rolling_army[unit]
+            if unit in Units and not unit.has_first_strike():
+                non_striking_army[unit] = rolling_army[unit]
+        rolling_army = non_striking_army
     # if first strike should be ignored
     else:
         pass
 
     remaining_supporting_units = sum(count for unit, count in rolling_army.items()
                                      if unit in Units and unit.gives_support())
+    if remaining_supporting_units > 0:
+        exit(0)
 
     if low_luck:
         damage_type_power = dict()
@@ -107,7 +115,7 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
         hits_per_type_or_unit = dict()
         for unit, count in rolling_army.items():
             if unit in Units and count > 0:
-                # don't attack if the unit only attacks once
+                # don't attack if the unit only attacks once and it's not the first round
                 if unit.attacks_once() and round_of_battle > 0:
                     continue
                 # if the unit's attacks do not stack (like aa_guns), only count the attack from one
@@ -164,9 +172,9 @@ def apply_losses(army, hits, is_attacking, loss_policy=loss_policies.default, ke
     return loss_policy(army, hits, is_attacking, keep_surviving_land)
 
 
-# count the units an army has left
+# count the units that can be lost an army has left
 def count_remaining_units(army):
-    return sum(count for unit, count in army.items() if unit in Units)
+    return sum(count for unit, count in army.items() if unit in Units and unit.get_hit_points() > 0)
 
 
 # check whether the attacking army should retreat based on the config
@@ -178,7 +186,7 @@ def check_retreat(attacking_army, round_of_battle):
 
 
 # battle emulation
-def do_battle(attacking_army, defending_army):
+def do_battle(attacking_army, defending_army, land_battle=True):
     # work on copy of armies so battle can be re-run
     attacking_army = attacking_army.copy()
     defending_army = defending_army.copy()
@@ -190,31 +198,32 @@ def do_battle(attacking_army, defending_army):
     # bombardment loss
     if low_luck:
         bombardment_power = sum(unit.get_attack()*count for unit, count in attacking_army.items()
-                                if unit in Units and ((unit.get_type() not in land_battle_units and is_land_battle) or
-                                (unit.get_type() not in sea_battle_units and not is_land_battle))
+                                if unit in Units and ((unit.get_type() not in land_battle_units and land_battle) or
+                                (unit.get_type() not in sea_battle_units and not land_battle))
                                 and unit.can_bombard())
         bombardment_loss_count = bombardment_power//6 + count_hits(roll_dice(1), bombardment_power % 6)
     else:
-        bombardment_loss_count = sum(count_hits(roll_dice(count), unit.get_attack()) for unit, count in attacking_army.items()
+        bombardment_loss_count = sum(count_hits(roll_dice(count), unit.get_attack())
+                                     for unit, count in attacking_army.items()
                                      if unit in Units and
-                                     ((unit.get_type() not in land_battle_units and is_land_battle) or
-                                     (unit.get_type() not in sea_battle_units and not is_land_battle))
+                                     ((unit.get_type() not in land_battle_units and land_battle) or
+                                     (unit.get_type() not in sea_battle_units and not land_battle))
                                      and unit.can_bombard())
     bombardment_loss = dict()
-    bombardment_loss[land_battle_units if is_land_battle else sea_battle_units] = bombardment_loss_count
+    bombardment_loss[land_battle_units if land_battle else sea_battle_units] = bombardment_loss_count
     apply_losses(defending_army, bombardment_loss, False, defender_loss_policy)
     # remove bombardment units from army
     units_to_remove = []
     for unit in attacking_army.keys():
-        if unit in Units and ((unit.get_type() not in land_battle_units and is_land_battle) or
-                              (unit.get_type() not in sea_battle_units and not is_land_battle)):
+        if unit in Units and ((unit.get_type() not in land_battle_units and land_battle) or
+                              (unit.get_type() not in sea_battle_units and not land_battle)):
             units_to_remove.append(unit)
     for unit in units_to_remove:
         del attacking_army[unit]
     units_to_remove = []
     for unit in defending_army.keys():
-        if unit in Units and ((unit.get_type() not in land_battle_units and is_land_battle) or
-                              (unit.get_type() not in sea_battle_units and not is_land_battle)):
+        if unit in Units and ((unit.get_type() not in land_battle_units and land_battle) or
+                              (unit.get_type() not in sea_battle_units and not land_battle)):
             units_to_remove.append(unit)
     for unit in units_to_remove:
         del defending_army[unit]
@@ -239,22 +248,22 @@ def do_battle(attacking_army, defending_army):
 
     return [count_remaining_units(attacking_army) > 0,      # won
             count_remaining_units(attacking_army) == 0 and count_remaining_units(defending_army) == 0,    # draw
-            count_remaining_units(defending_army),          # lost
+            count_remaining_units(defending_army) > 0,      # lost
             count_remaining_units(attacking_army),          # number attacking units remaining
             count_remaining_units(defending_army),          # number defending units remaining
             get_tuv(attacking_army) - attacking_army_tuv,   # attacker delta tuv
             get_tuv(defending_army) - defending_army_tuv,   # defender delta tuv
             get_tuv(attacking_army) - attacking_army_tuv - get_tuv(defending_army) + defending_army_tuv,  # tuv swing
-            round_of_combat + 1]                            # number of rounds of combat
+            round_of_combat]                            # number of rounds of combat
 
 
 # do a bunch of battles and aggregate results
-def do_many_battles(attacking_army, defending_army, battle_count):
+def do_many_battles(attacking_army, defending_army, battle_count, land_battle=True):
     print("Simulating Battles\nAttacker: " + str(attacking_army) + "\nDefender: " + str(defending_army))
     # won, draw, lost, attackers remaining, defenders remaining, attack delta tuv, defend delta tuv, tuv swing, rounds
     full_results = (0,)*9
     for i in range(battle_count):
-        full_results = [*map(add, full_results, do_battle(attacking_army, defending_army))]
+        full_results = [*map(add, full_results, do_battle(attacking_army, defending_army, land_battle))]
         # progress update
         if i % 2000 == 0:
             print("Completed " + str(i+1) + " simulations out of " + str(battle_count))
@@ -271,7 +280,7 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
     all_results = [[[] for i in range(len(defender_armies))] for i in range(len(attacker_armies))]
     for i, attacker_army in enumerate(attacker_armies):
         for j, defender_army in enumerate(defender_armies):
-            all_results[i][j] = do_many_battles(attacker_army, defender_army, battle_count)
+            all_results[i][j] = do_many_battles(attacker_army, defender_army, battle_count, land_battle)
     return all_results
 
 
@@ -324,7 +333,13 @@ if __name__ == "__main__":
                                             use_all_available_money)
     for row in results:
         print([col[0] for col in row])
-    print(get_possible_armies(attacker_available_money, is_land_battle, use_all_available_money))
-    print(get_possible_armies(defender_available_money, is_land_battle, use_all_available_money))
+    attacker_possible_armies = get_possible_armies(attacker_available_money, is_land_battle, use_all_available_money)
+    print("Attacking Armies:")
+    for i, army in enumerate(attacker_possible_armies):
+        print(str(i) + ": " + str(army))
+    print("\nDefending Armies:")
+    defender_possible_armies = get_possible_armies(defender_available_money, is_land_battle, use_all_available_money)
+    for i, army in enumerate(defender_possible_armies):
+        print(str(i) + ": " + str(army))
 
 # todo analysis

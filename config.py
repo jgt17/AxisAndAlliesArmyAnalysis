@@ -12,13 +12,13 @@ retreat_after_round = -1
 retreat_when_x_units_left = -1
 retreat_when_only_air_left = False
 attacking_land_must_survive = True
-is_land_battle = True
+is_land_battle = False
 
-low_luck = True
+low_luck = False
 
 use_all_available_money = True
 
 # low values for debugging
-attacker_available_money = 10
+attacker_available_money = 24
 defender_available_money = attacker_available_money
-battle_simulation_count = 500
+battle_simulation_count = 2000
