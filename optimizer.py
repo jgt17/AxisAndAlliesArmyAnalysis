@@ -189,9 +189,11 @@ def do_battle(attacking_army, defending_army, land_battle=True):
     attacking_army = attacking_army.copy()
     defending_army = defending_army.copy()
 
-    # record initial tuv of the armies
+    # record initial tuv and size of the armies
     attacking_army_tuv = get_tuv(attacking_army)
     defending_army_tuv = get_tuv(defending_army)
+    beginning_unit_count_attacker = count_remaining_units(attacking_army)
+    beginning_unit_count_defender = count_remaining_units(defending_army)
 
     # bombardment loss
     if low_luck:
@@ -247,8 +249,8 @@ def do_battle(attacking_army, defending_army, land_battle=True):
     return [count_remaining_units(attacking_army) > 0,      # won
             count_remaining_units(attacking_army) == 0 and count_remaining_units(defending_army) == 0,    # draw
             count_remaining_units(defending_army) > 0,      # lost
-            count_remaining_units(attacking_army),          # number attacking units remaining
-            count_remaining_units(defending_army),          # number defending units remaining
+            count_remaining_units(attacking_army)/beginning_unit_count_attacker,  # percent attacking units remaining
+            count_remaining_units(defending_army)/beginning_unit_count_defender,  # percent defending units remaining
             get_tuv(attacking_army) - attacking_army_tuv,   # attacker delta tuv
             get_tuv(defending_army) - defending_army_tuv,   # defender delta tuv
             get_tuv(attacking_army) - attacking_army_tuv - get_tuv(defending_army) + defending_army_tuv,  # tuv swing
@@ -259,13 +261,25 @@ def do_battle(attacking_army, defending_army, land_battle=True):
 def do_many_battles(attacking_army, defending_army, battle_count, land_battle=True):
     print("Simulating Battles\nAttacker: " + str(attacking_army) + "\nDefender: " + str(defending_army))
     # won, draw, lost, attackers remaining, defenders remaining, attack delta tuv, defend delta tuv, tuv swing, rounds
-    full_results = (0,)*9
+    full_results = [0]*9
+    units_remaining_if_side_won = [0, 0, 0]
     for i in range(battle_count):
-        full_results = [*map(add, full_results, do_battle(attacking_army, defending_army, land_battle))]
+        round_results = do_battle(attacking_army, defending_army, land_battle)
+        full_results = [*map(add, full_results, round_results)]
+        if round_results[0] == 1:
+            units_remaining_if_side_won[0] += round_results[3]
+        elif round_results[2] == 1:
+            units_remaining_if_side_won[2] += round_results[4]
         # progress update
         if i % 2000 == 0:
             print("Completed " + str(i+1) + " simulations out of " + str(battle_count))
-    return [elem/battle_count for elem in full_results]
+    units_remaining_averages = [units_remaining_if_side_won[i]/full_results[i] if full_results[i] > 0 else 0
+                                for i in range(3)]
+    del units_remaining_averages[1]
+    full_averages = [elem/battle_count for elem in full_results]
+    final_results = full_averages[:4]+[units_remaining_averages[0]]+[full_averages[4]]+\
+                    [units_remaining_averages[1]]+full_averages[5:]
+    return final_results
 
 
 # do all possible battles
@@ -285,7 +299,7 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
 def get_folder_name(attacker_money, defender_money, land_battle, version=None):
     return "results_" + ("land_" if land_battle else "sea_") + \
            str(attacker_money) + ("_" + defender_money if attacker_money != defender_money else "")\
-           + ("-" + str(version if version is not None else ""))
+           + (("-" + str(version)) if version is not None else "")
 
 
 # generate folder name for storing results of a run
@@ -329,13 +343,11 @@ def generate_and_save_all_battles(attacker_money, defender_money, battle_count, 
 
 
 if __name__ == "__main__":
-    print("hi")
     results = generate_and_save_all_battles(attacker_available_money,
                                             defender_available_money,
                                             battle_simulation_count,
                                             is_land_battle,
                                             use_all_available_money)
-    print("hello again")
     for row in results:
         print([col[0] for col in row])
     attacker_possible_armies = get_possible_armies(attacker_available_money, is_land_battle, use_all_available_money)
@@ -346,5 +358,3 @@ if __name__ == "__main__":
     defender_possible_armies = get_possible_armies(defender_available_money, is_land_battle, use_all_available_money)
     for i, army in enumerate(defender_possible_armies):
         print(str(i) + ": " + str(army))
-
-# todo analysis

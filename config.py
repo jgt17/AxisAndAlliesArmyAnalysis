@@ -21,4 +21,4 @@ use_all_available_money = True
 # low values for debugging
 attacker_available_money = 20
 defender_available_money = attacker_available_money
-battle_simulation_count = 2000
+battle_simulation_count = 100
