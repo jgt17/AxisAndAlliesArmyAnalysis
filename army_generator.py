@@ -118,7 +118,7 @@ def generate_and_save_armies_for_common_money_amounts():
     money = 10
     if not os.path.isfile(get_filename(money, land_battle)):
         generate_and_save_possible_armies(money, land_battle=land_battle)
-    for money in range(50, 400, 50):
+    for money in range(50, 450, 50):
         if not os.path.isfile(get_filename(money, land_battle)):
             generate_and_save_possible_armies(money, land_battle=land_battle)
 
@@ -126,7 +126,7 @@ def generate_and_save_armies_for_common_money_amounts():
     money = 10
     if not os.path.isfile(get_filename(money, land_battle)):
         generate_and_save_possible_armies(money, land_battle=land_battle)
-    for money in range(50, 600, 50):
+    for money in range(50, 550, 50):
         if not os.path.isfile(get_filename(money, land_battle)):
             generate_and_save_possible_armies(money, land_battle=land_battle)
 

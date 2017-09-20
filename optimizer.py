@@ -60,8 +60,6 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
 
     remaining_supporting_units = sum(count for unit, count in rolling_army.items()
                                      if unit in Units and unit.gives_support())
-    if remaining_supporting_units > 0:
-        exit(0)
 
     if low_luck:
         damage_type_power = dict()
@@ -254,7 +252,7 @@ def do_battle(attacking_army, defending_army, land_battle=True):
             get_tuv(attacking_army) - attacking_army_tuv,   # attacker delta tuv
             get_tuv(defending_army) - defending_army_tuv,   # defender delta tuv
             get_tuv(attacking_army) - attacking_army_tuv - get_tuv(defending_army) + defending_army_tuv,  # tuv swing
-            round_of_combat]                            # number of rounds of combat
+            round_of_combat]                                # number of rounds of combat
 
 
 # do a bunch of battles and aggregate results
@@ -284,10 +282,15 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
     return all_results
 
 
+def get_folder_name(attacker_money, defender_money, land_battle, version=None):
+    return "results_" + ("land_" if land_battle else "sea_") + \
+           str(attacker_money) + ("_" + defender_money if attacker_money != defender_money else "")\
+           + ("-" + str(version if version is not None else ""))
+
+
 # generate folder name for storing results of a run
 def get_new_folder_name(attacker_money, defender_money, land_battle):
-    base = "results_" + ("land_" if land_battle else "sea_") + \
-           str(attacker_money) + ("_" + defender_money if attacker_money != defender_money else "")
+    base = get_folder_name(attacker_money, defender_money, land_battle)
     if os.path.isdir(base):
         i = 1
         while os.path.isdir(base + "-" + str(i)):
@@ -326,11 +329,13 @@ def generate_and_save_all_battles(attacker_money, defender_money, battle_count, 
 
 
 if __name__ == "__main__":
+    print("hi")
     results = generate_and_save_all_battles(attacker_available_money,
                                             defender_available_money,
                                             battle_simulation_count,
                                             is_land_battle,
                                             use_all_available_money)
+    print("hello again")
     for row in results:
         print([col[0] for col in row])
     attacker_possible_armies = get_possible_armies(attacker_available_money, is_land_battle, use_all_available_money)
