@@ -71,11 +71,11 @@ def generate_possible_armies(money, *allowed_unit_types, prohibited_units=(), la
 
     # put results in a nicer format
     # helper function to convert the tuples describing the army configuration into more useful dicts
-    def configuration_to_dict(configuration):
+    def configuration_to_dict(config):
         dict_version = {}
         for unit in allowed_units:
-            dict_version[unit] = configuration[army_index(unit)]
-        dict_version["MONEY"] = configuration[money_index]
+            dict_version[unit] = config[army_index(unit)]
+        dict_version["MONEY"] = config[money_index]
         return dict_version
 
     possible_armies_raw_list = sorted(list(finished_set))

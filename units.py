@@ -24,31 +24,31 @@ class UnitTypes(Enum):
 #         attacks all attackable,
 #         attacks once,
 #         unique)
-units = {"AA_GUN":(5, 0, 1, False, False, 1, -1, UnitTypes.LAND,
-              (UnitTypes.AIR,), True, False, False, True, True, True),
+units = {"AA_GUN": (5, 0, 1, False, False, 1, -1, UnitTypes.LAND,
+                    (UnitTypes.AIR,), True, False, False, True, True, True),
 
-            "INFANTRY": (3, 1, 2, True, False, 1, 1, UnitTypes.LAND,
-                        (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
-            "ARTILLERY": (4, 2, 2, False, True, 1, 1, UnitTypes.LAND,
-                         (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
-            "TANK": (5, 3, 3, False, False, 2, 1, UnitTypes.LAND,
-                    (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
+         "INFANTRY": (3, 1, 2, True, False, 1, 1, UnitTypes.LAND,
+                      (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
+         "ARTILLERY": (4, 2, 2, False, True, 1, 1, UnitTypes.LAND,
+                       (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
+         "TANK": (5, 3, 3, False, False, 2, 1, UnitTypes.LAND,
+                  (UnitTypes.LAND, UnitTypes.AIR), False, False, False, False, False, False),
 
-            "FIGHTER": (10, 3, 4, False, False, 4, 1, UnitTypes.AIR,
-                       (UnitTypes.LAND, UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
-            "BOMBER": (15, 4, 1, False, False, 6, 1, UnitTypes.AIR,
-                      (UnitTypes.LAND, UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
+         "FIGHTER": (10, 3, 4, False, False, 4, 1, UnitTypes.AIR,
+                     (UnitTypes.LAND, UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
+         "BOMBER": (15, 4, 1, False, False, 6, 1, UnitTypes.AIR,
+                    (UnitTypes.LAND, UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
 
-            "TRANSPORT":(8, 0, 1, False, False, 2, 1, UnitTypes.SEA,
-                         (UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
-            "AIRCRAFT_CARRIER":(16, 1, 3, False, False, 2, 1, UnitTypes.SEA,
-                                (UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
-            "SUBMARINE":(8, 2, 2, False, False, 2, 1, UnitTypes.SEA,
-                         (UnitTypes.SEA,), True, False, False, False, False, False),
-            "DESTROYER":(12, 3, 3, False, False, 2, 1, UnitTypes.SEA,
-                         (UnitTypes.SEA, UnitTypes.AIR), False, True, False, False, False, False),
-            "BATTLESHIP":(24, 4, 4, False, False, 2, 2, UnitTypes.SEA,
-                          (UnitTypes.SEA, UnitTypes.AIR), False, False, True, False, False, False)}
+         "TRANSPORT": (8, 0, 1, False, False, 2, 1, UnitTypes.SEA,
+                       (UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
+         "AIRCRAFT_CARRIER": (16, 1, 3, False, False, 2, 1, UnitTypes.SEA,
+                              (UnitTypes.AIR, UnitTypes.SEA), False, False, False, False, False, False),
+         "SUBMARINE": (8, 2, 2, False, False, 2, 1, UnitTypes.SEA,
+                       (UnitTypes.SEA,), True, False, False, False, False, False),
+         "DESTROYER": (12, 3, 3, False, False, 2, 1, UnitTypes.SEA,
+                       (UnitTypes.SEA, UnitTypes.AIR), False, True, False, False, False, False),
+         "BATTLESHIP": (24, 4, 4, False, False, 2, 2, UnitTypes.SEA,
+                        (UnitTypes.SEA, UnitTypes.AIR), False, False, True, False, False, False)}
 
 # generate intermediate units for multiple hit points
 units_to_add = []
@@ -62,6 +62,7 @@ for unit_name, properties in units.items():
 for new_unit in units_to_add:
     units[new_unit[0]] = new_unit[1]
 
+# noinspection PyArgumentList
 Units = Enum("Units", units, module=__name__)
 
 

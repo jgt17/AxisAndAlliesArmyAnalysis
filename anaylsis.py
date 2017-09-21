@@ -52,7 +52,7 @@ def find_best(attacker_money=None, defender_money=None, land_battle=None,
         if results is None:
             raise Exception("No results provided for analysis.")
         if (len(results) != len(attacker_armies)) or (len(results[0]) != len(defender_armies)):
-            raise Exception("Provided results do not match provided arimes.")
+            raise Exception("Provided results do not match provided armies.")
     else:
         if attacker_money is None:
             attacker_money = config.attacker_available_money
@@ -119,7 +119,7 @@ def do_all_stats(attacker_money=None, defender_money=None, land_battle=None,
              [[stat,
                find_best(attacker_money=attacker_money, defender_money=defender_money, land_battle=land_battle,
                          results=results, attacker_armies=attacker_armies, defender_armies=defender_armies,
-                         results_property=stat)]
+                         results_property=list_of_stat_names.index(stat))]
               for stat in list_of_stat_names]]
             for method in aggregation_methods]
 

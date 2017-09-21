@@ -16,14 +16,15 @@ from army_generator import get_possible_armies
 __simulation_pool = None
 __total_results = Array('f', 11)
 
+
 # get total unit value of an army
-def get_tuv(army):
-    return sum(unit.get_base_unit().get_cost()*count for unit, count in army.items() if unit in Units)
+def get_tuv(army_units):
+    return sum(unit.get_base_unit().get_cost()*count for unit, count in army_units.items() if unit in Units)
 
 
 # roll a bunch of dice
 def roll_dice(num_to_roll):
-    return [random.randint(1, 6) for i in range(num_to_roll)]
+    return [random.randint(1, 6) for _ in range(num_to_roll)]
 
 
 # check hits
@@ -136,7 +137,7 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
                         if receiving_unit in Units:
                             if receiving_unit.get_type() in unit.get_attackable_types():
                                 # don't continue to attack units that have technically been killed
-                                for i in range(supported):
+                                for _ in range(supported):
                                     if receiving_unit in hits_per_type_or_unit:
                                         hits_per_type_or_unit[receiving_unit] += count_hits(
                                             roll_dice(receiving_count-hits_per_type_or_unit[receiving_unit]),
@@ -145,7 +146,7 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
                                         hits_per_type_or_unit[receiving_unit] = count_hits(
                                             roll_dice(receiving_count-hits_per_type_or_unit[receiving_unit]),
                                             power(unit)+1)
-                                for i in range(count):
+                                for _ in range(count):
                                     if receiving_unit in hits_per_type_or_unit:
                                         hits_per_type_or_unit[receiving_unit] += count_hits(
                                             roll_dice(receiving_count - hits_per_type_or_unit[receiving_unit]),
@@ -162,21 +163,21 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
                                      if receiving_unit in Units)])
                     if attackable_types_in_receiving_army in hits_per_type_or_unit:
                         hits_per_type_or_unit[attackable_types_in_receiving_army] += \
-                            count_hits(roll_dice(count), power(unit)) + count_hits(roll_dice(supported), power(unit)+1)
+                            count_hits(roll_dice(count), power(unit))+count_hits(roll_dice(supported), power(unit)+1)
                     else:
                         hits_per_type_or_unit[attackable_types_in_receiving_army] = \
-                            count_hits(roll_dice(count), power(unit)) + count_hits(roll_dice(supported), power(unit) + 1)
+                            count_hits(roll_dice(count), power(unit))+count_hits(roll_dice(supported), power(unit)+1)
     return hits_per_type_or_unit
 
 
 # apply losses
-def apply_losses(army, hits, is_attacking, loss_policy=loss_policies.default, keep_surviving_land=True):
-    return loss_policy(army, hits, is_attacking, keep_surviving_land)
+def apply_losses(army_units, hits, is_attacking, loss_policy=loss_policies.default, keep_surviving_land=True):
+    return loss_policy(army_units, hits, is_attacking, keep_surviving_land)
 
 
 # count the units that can be lost an army has left
-def count_remaining_units(army):
-    return sum(count for unit, count in army.items() if unit in Units and unit.get_hit_points() > 0)
+def count_remaining_units(army_units):
+    return sum(count for unit, count in army_units.items() if unit in Units and unit.get_hit_points() > 0)
 
 
 # check whether the attacking army should retreat based on the config
@@ -267,7 +268,7 @@ def do_many_battles(attacking_army, defending_army, battle_count, land_battle=Tr
     # won, draw, lost, attackers remaining, defenders remaining, attack delta tuv, defend delta tuv, tuv swing, rounds
     full_results = [0]*9
     units_remaining_if_side_won = [0, 0, 0]
-    for i in range(battle_count):
+    for battle_index in range(battle_count):
         round_results = do_battle(attacking_army, defending_army, land_battle)
         full_results = [*map(add, full_results, round_results)]
         if round_results[0] == 1:
@@ -275,14 +276,14 @@ def do_many_battles(attacking_army, defending_army, battle_count, land_battle=Tr
         elif round_results[2] == 1:
             units_remaining_if_side_won[2] += round_results[4]
         # progress update
-        if (i+1) % 2000 == 0:
-            print("Completed " + str(i+1) + " simulations out of " + str(battle_count))
-    units_remaining_averages = [units_remaining_if_side_won[i]/full_results[i] if full_results[i] > 0 else 0
-                                for i in range(3)]
+        if (battle_index+1) % 2000 == 0:
+            print("Completed " + str(battle_index+1) + " simulations out of " + str(battle_count))
+    units_remaining_averages = [units_remaining_if_side_won[index]/full_results[index] if full_results[index] > 0 else 0
+                                for index in range(3)]
     del units_remaining_averages[1]
     full_averages = [elem/battle_count for elem in full_results]
-    final_results = full_averages[:4]+[units_remaining_averages[0]]+[full_averages[4]]+\
-                    [units_remaining_averages[1]]+full_averages[5:]
+    final_results = full_averages[:4] + [units_remaining_averages[0]] + [full_averages[4]] + \
+        [units_remaining_averages[1]] + full_averages[5:]
     return final_results
 
 
@@ -292,9 +293,12 @@ def do_many_battles_multitprocessed(attacking_army, defending_army, battle_count
     # won, draw, lost, attackers remaining, defenders remaining, attack delta tuv, defend delta tuv, tuv swing, rounds
 
     global __total_results
-    for i in range(len(__total_results)):
-        __total_results[i] = 0
-    __simulation_pool.map(__do_round, [(i, attacking_army, defending_army, land_battle) for i in range(battle_count)], chunksize=1)
+    for stat_index in range(len(__total_results)):
+        __total_results[stat_index] = 0
+    __simulation_pool.map(__do_round,
+                          [(battle_index, battle_count, attacking_army, defending_army, land_battle)
+                           for battle_index in range(battle_count)],
+                          chunksize=1)
     total_results_as_list = list(__total_results)
     to_divide_by = [sum(total_results_as_list[:3])] * 11
     to_divide_by[4] = total_results_as_list[0]
@@ -308,23 +312,24 @@ def do_many_battles_multitprocessed(attacking_army, defending_army, battle_count
 # helper for multiprocessing
 def __do_round(simulation_round_info):
     simulation_round = simulation_round_info[0]
-    attacking_army = simulation_round_info[1]
-    defending_army = simulation_round_info[2]
-    land_battle = simulation_round_info[3]
+    max_rounds = simulation_round_info[1]
+    attacking_army = simulation_round_info[2]
+    defending_army = simulation_round_info[3]
+    land_battle = simulation_round_info[4]
     round_results = do_battle(attacking_army, defending_army, land_battle)
     complete_results = round_results[:4] + [round_results[3] if round_results[0] == 1 else 0] +\
         [round_results[4]] + [round_results[4] if round_results[2] == 1 else 0] + round_results[5:]
     # progress update
     if (simulation_round+1) % 2000 == 0:
-        print("Completed " + str(simulation_round + 1) + " simulations out of " + str(simulation_round))
+        print("Completed " + str(simulation_round + 1) + " simulations out of " + str(max_rounds))
     __sum_results(complete_results)
 
 
 # helper for multiprocessing
 def __sum_results(round_results):
     global __total_results
-    for i in range(len(__total_results)):
-        __total_results[i] += round_results[i]
+    for index in range(len(__total_results)):
+        __total_results[index] += round_results[index]
 
 
 # process pool initializer
@@ -340,22 +345,17 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
         defender_armies = attacker_armies.copy()
     else:
         defender_armies = get_possible_armies(defender_money, land_battle, use_all_money)
-    all_results = [[[] for i in range(len(defender_armies))] for i in range(len(attacker_armies))]
+    all_results = [[[] for _ in range(len(defender_armies))] for _ in range(len(attacker_armies))]
     global __simulation_pool
     __simulation_pool = pool.Pool(initializer=init, initargs=(__total_results,))
     import time
     start_time = time.time()
-    for i, attacker_army in enumerate(attacker_armies):
-        for j, defender_army in enumerate(defender_armies):
-            all_results[i][j] = do_many_battles_multitprocessed(attacker_army, defender_army, battle_count, land_battle)
+    for attacker_index, attacker_army in enumerate(attacker_armies):
+        for defender_index, defender_army in enumerate(defender_armies):
+            all_results[attacker_index][defender_index] = \
+                do_many_battles_multitprocessed(attacker_army, defender_army, battle_count, land_battle)
     total_time_m = time.time()-start_time
-    start_time = time.time()
-    for i, attacker_army in enumerate(attacker_armies):
-        for j, defender_army in enumerate(defender_armies):
-            all_results[i][j] = do_many_battles(attacker_army, defender_army, battle_count, land_battle)
-    total_time = time.time() - start_time
     print("Total Time Multiprocessed: " + str(total_time_m))
-    print("Total Time Single Process: " + str(total_time))
     return all_results
 
 
@@ -368,13 +368,13 @@ def get_folder_name(attacker_money, defender_money, land_battle, version=None):
 # generate folder name for storing results of a run
 def get_new_folder_name(attacker_money, defender_money, land_battle):
     base = get_folder_name(attacker_money, defender_money, land_battle)
-    i = None
+    version = None
     if os.path.isdir(base):
-        i = 1
+        version = 1
         while os.path.isdir(base + "-" + str(i)):
-            i += 1
-        base += "-" + str(i)
-    return base, i
+            version += 1
+        base += "-" + str(version)
+    return base, version
 
 
 # save config settings when run
@@ -400,10 +400,10 @@ def generate_and_save_all_battles(attacker_money, defender_money, battle_count, 
     folder_name, version = get_new_folder_name(attacker_money, defender_money, land_battle)
     os.mkdir(folder_name)
     save_config(folder_name, attacker_money, defender_money, battle_count, land_battle, use_all_money)
-    results = do_all_possible_battles(attacker_money, defender_money, battle_count, land_battle, use_all_money)
+    full_results = do_all_possible_battles(attacker_money, defender_money, battle_count, land_battle, use_all_money)
     with open(folder_name + "/full_results", "wb") as f:
-        pickle.dump(results, f)
-    return results, version
+        pickle.dump(full_results, f)
+    return full_results, version
 
 
 if __name__ == "__main__":
@@ -416,6 +416,7 @@ if __name__ == "__main__":
         print([col[0] for col in row])
     attacker_possible_armies = get_possible_armies(attacker_available_money, is_land_battle, use_all_available_money)
     print("Attacking Armies:")
+
     for i, army in enumerate(attacker_possible_armies):
         print(str(i) + ": " + str(army))
     print("\nDefending Armies:")
