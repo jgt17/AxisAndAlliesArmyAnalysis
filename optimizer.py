@@ -1,7 +1,8 @@
 import random
 import os
 import pickle
-from operator import add
+from multiprocessing import pool, Array
+from operator import add, truediv
 
 from units import Units, UnitTypes
 from config import low_luck, retreat_after_round, retreat_when_x_units_left, retreat_when_only_air_left
@@ -11,6 +12,9 @@ from config import attacker_available_money, defender_available_money, battle_si
 import loss_policies
 from army_generator import get_possible_armies
 
+# process pool for multiprocessing
+__simulation_pool = None
+__total_results = Array('f', 11)
 
 # get total unit value of an army
 def get_tuv(army):
@@ -271,7 +275,7 @@ def do_many_battles(attacking_army, defending_army, battle_count, land_battle=Tr
         elif round_results[2] == 1:
             units_remaining_if_side_won[2] += round_results[4]
         # progress update
-        if i % 2000 == 0:
+        if (i+1) % 2000 == 0:
             print("Completed " + str(i+1) + " simulations out of " + str(battle_count))
     units_remaining_averages = [units_remaining_if_side_won[i]/full_results[i] if full_results[i] > 0 else 0
                                 for i in range(3)]
@@ -282,6 +286,53 @@ def do_many_battles(attacking_army, defending_army, battle_count, land_battle=Tr
     return final_results
 
 
+# multiprocessing!
+def do_many_battles_multitprocessed(attacking_army, defending_army, battle_count, land_battle=True):
+    print("Simulating Battles\nAttacker: " + str(attacking_army) + "\nDefender: " + str(defending_army))
+    # won, draw, lost, attackers remaining, defenders remaining, attack delta tuv, defend delta tuv, tuv swing, rounds
+
+    global __total_results
+    for i in range(len(__total_results)):
+        __total_results[i] = 0
+    __simulation_pool.map(__do_round, [(i, attacking_army, defending_army, land_battle) for i in range(battle_count)], chunksize=1)
+    total_results_as_list = list(__total_results)
+    to_divide_by = [sum(total_results_as_list[:3])] * 11
+    to_divide_by[4] = total_results_as_list[0]
+    to_divide_by[6] = total_results_as_list[2]
+
+    def truediv_or_zero(a, b):
+        return truediv(a, b) if b != 0 else 0
+    return [*map(truediv_or_zero, total_results_as_list, to_divide_by)]
+
+
+# helper for multiprocessing
+def __do_round(simulation_round_info):
+    simulation_round = simulation_round_info[0]
+    attacking_army = simulation_round_info[1]
+    defending_army = simulation_round_info[2]
+    land_battle = simulation_round_info[3]
+    round_results = do_battle(attacking_army, defending_army, land_battle)
+    complete_results = round_results[:4] + [round_results[3] if round_results[0] == 1 else 0] +\
+        [round_results[4]] + [round_results[4] if round_results[2] == 1 else 0] + round_results[5:]
+    # progress update
+    if (simulation_round+1) % 2000 == 0:
+        print("Completed " + str(simulation_round + 1) + " simulations out of " + str(simulation_round))
+    __sum_results(complete_results)
+
+
+# helper for multiprocessing
+def __sum_results(round_results):
+    global __total_results
+    for i in range(len(__total_results)):
+        __total_results[i] += round_results[i]
+
+
+# process pool initializer
+def init(__t_a):
+    global __total_results
+    __total_results = __t_a
+
+
 # do all possible battles
 def do_all_possible_battles(attacker_money, defender_money, battle_count, land_battle=True, use_all_money=True):
     attacker_armies = get_possible_armies(attacker_money, land_battle, use_all_money)
@@ -290,9 +341,21 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
     else:
         defender_armies = get_possible_armies(defender_money, land_battle, use_all_money)
     all_results = [[[] for i in range(len(defender_armies))] for i in range(len(attacker_armies))]
+    global __simulation_pool
+    __simulation_pool = pool.Pool(initializer=init, initargs=(__total_results,))
+    import time
+    start_time = time.time()
+    for i, attacker_army in enumerate(attacker_armies):
+        for j, defender_army in enumerate(defender_armies):
+            all_results[i][j] = do_many_battles_multitprocessed(attacker_army, defender_army, battle_count, land_battle)
+    total_time_m = time.time()-start_time
+    start_time = time.time()
     for i, attacker_army in enumerate(attacker_armies):
         for j, defender_army in enumerate(defender_armies):
             all_results[i][j] = do_many_battles(attacker_army, defender_army, battle_count, land_battle)
+    total_time = time.time() - start_time
+    print("Total Time Multiprocessed: " + str(total_time_m))
+    print("Total Time Single Process: " + str(total_time))
     return all_results
 
 
@@ -305,21 +368,22 @@ def get_folder_name(attacker_money, defender_money, land_battle, version=None):
 # generate folder name for storing results of a run
 def get_new_folder_name(attacker_money, defender_money, land_battle):
     base = get_folder_name(attacker_money, defender_money, land_battle)
+    i = None
     if os.path.isdir(base):
         i = 1
         while os.path.isdir(base + "-" + str(i)):
             i += 1
         base += "-" + str(i)
-    return base
+    return base, i
 
 
 # save config settings when run
 def save_config(folder_name, attacker_money, defender_money, battle_count, land_battle, use_all_money):
     config_settings = "Config:\n\n" \
                       "Attacker Money:             " + str(attacker_money) + "\n" \
-                      "Attacker Loss Policy:       " + str(attacker_loss_policy) + "\n\n" \
+                      "Attacker Loss Policy:       " + str(attacker_loss_policy.__name__) + "\n\n" \
                       "Defender money:             " + str(defender_money) + "\n" \
-                      "Defender Loss Policy:       " + str(defender_loss_policy) + "\n\n" \
+                      "Defender Loss Policy:       " + str(defender_loss_policy.__name__) + "\n\n" \
                       "" + ("Don't Use All Money\n\n" if not use_all_money else "") + "" \
                       "Battle Type:                " + ("Land" if land_battle else "Sea") + "\n" \
                       "Number of Battles:          " + str(battle_count) + "\n" \
@@ -333,13 +397,13 @@ def save_config(folder_name, attacker_money, defender_money, battle_count, land_
 
 # save results of all possible battles with the config that made them
 def generate_and_save_all_battles(attacker_money, defender_money, battle_count, land_battle=True, use_all_money=True):
-    folder_name = get_new_folder_name(attacker_money, defender_money, land_battle)
+    folder_name, version = get_new_folder_name(attacker_money, defender_money, land_battle)
     os.mkdir(folder_name)
     save_config(folder_name, attacker_money, defender_money, battle_count, land_battle, use_all_money)
     results = do_all_possible_battles(attacker_money, defender_money, battle_count, land_battle, use_all_money)
     with open(folder_name + "/full_results", "wb") as f:
         pickle.dump(results, f)
-    return results
+    return results, version
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ def load_results(attacker_money, defender_money, land_battle, version=None):
     folder_name = get_folder_name(attacker_money, defender_money, land_battle, version)
     try:
         with open(folder_name+"/full_results", 'rb') as f:
-            return pickle.load(f)
+            return pickle.load(f), version
     except FileNotFoundError:
         print("No Results Found. Generating Results Now")
         return generate_and_save_all_battles(attacker_money, defender_money, config.battle_simulation_count,
@@ -43,7 +43,7 @@ def load_results(attacker_money, defender_money, land_battle, version=None):
 # results property according to the method of aggregation
 def find_best(attacker_money=None, defender_money=None, land_battle=None,
               results=None, attacker_armies=None, defender_armies=None,
-              results_property=0, method_of_aggregation=mean):
+              results_property=0, method_of_aggregation=mean, version=None):
     # input reconciliation
     if attacker_armies is not None:
         if defender_armies is None:
@@ -61,7 +61,7 @@ def find_best(attacker_money=None, defender_money=None, land_battle=None,
         if land_battle is None:
             land_battle = config.is_land_battle
 
-        results = load_results(attacker_money, defender_money, land_battle)
+        results, version = load_results(attacker_money, defender_money, land_battle, version)
         attacker_armies = get_possible_armies(attacker_money, land_battle)
         defender_armies = get_possible_armies(defender_money, land_battle)
     if not isinstance(results_property, int):
@@ -71,7 +71,6 @@ def find_best(attacker_money=None, defender_money=None, land_battle=None,
                           for attacker_results in results]
 
     # find maximum using the aggregation method
-    indices = []
     index, maximum = max(enumerate(aggregated_results), key=operator.itemgetter(1))
     army = attacker_armies[index]
 
@@ -94,10 +93,14 @@ def visualize(results, results_property_name, folder_name):
     max_brightness = (2**bit_depth)-1
 
     # scale results to 0-127 for grayscale interpretation
-    # if delta tuv type result, scale to
-    if results_property == 7:
+    # win/draw/loss percentages and percent units remaining
+    if results_property <= 6:
+        filtered_results = [r * max_brightness for r in filtered_results]
+    # TUV swing
+    elif results_property == 9:
         range_from_zero = max(abs(r) for r in filtered_results)
         filtered_results = [r*max_brightness/range_from_zero + (max_brightness+1)/2 for r in filtered_results]
+    # rounds and delta TUV
     else:
         max_value = max(r for r in filtered_results)
         min_value = min(r for r in filtered_results)
@@ -111,7 +114,7 @@ def visualize(results, results_property_name, folder_name):
 
 def do_all_stats(attacker_money=None, defender_money=None, land_battle=None,
                  results=None, attacker_armies=None, defender_armies=None):
-    aggregation_methods = [mean, median]
+    aggregation_methods = [mean, median, min]
     return [[method,
              [[stat,
                find_best(attacker_money=attacker_money, defender_money=defender_money, land_battle=land_battle,
@@ -148,7 +151,7 @@ def do_and_save_all_analysis(attacker_money=None, defender_money=None, land_batt
         if land_battle is None:
             land_battle = config.is_land_battle
 
-        results = load_results(attacker_money, defender_money, land_battle)
+        results, version = load_results(attacker_money, defender_money, land_battle, version)
         attacker_armies = get_possible_armies(attacker_money, land_battle)
         defender_armies = get_possible_armies(defender_money, land_battle)
 

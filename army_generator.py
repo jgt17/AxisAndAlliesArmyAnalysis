@@ -6,6 +6,7 @@ from config import land_battle_units, sea_battle_units
 
 
 # generate all the possible armies with the money available
+# todo multithreading?
 def generate_possible_armies(money, *allowed_unit_types, prohibited_units=(), land_battle=True, use_all_money=True):
     if (money > 400 and land_battle) or (money > 500 and not land_battle):
         raise Exception("Too many possibilities to compute.")

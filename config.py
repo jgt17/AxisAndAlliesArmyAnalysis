@@ -1,5 +1,6 @@
 import loss_policies
 from units import UnitTypes
+from multiprocessing import cpu_count
 
 # config
 land_battle_units = (UnitTypes.LAND, UnitTypes.AIR)
@@ -19,6 +20,11 @@ low_luck = False
 use_all_available_money = True
 
 # low values for debugging
-attacker_available_money = 20
+attacker_available_money = 10
 defender_available_money = attacker_available_money
-battle_simulation_count = 100
+battle_simulation_count = 10000
+
+
+threads_to_use = None
+if threads_to_use is None:
+    threads_to_use = cpu_count()*2
