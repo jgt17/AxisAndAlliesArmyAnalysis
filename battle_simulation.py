@@ -9,8 +9,11 @@ from config import low_luck, retreat_after_round, retreat_when_x_units_left, ret
 from config import attacking_land_must_survive, attacker_loss_policy, defender_loss_policy
 from config import is_land_battle, land_battle_units, sea_battle_units
 from config import attacker_available_money, defender_available_money, battle_simulation_count, use_all_available_money
+from config import number_of_processes
 import loss_policies
 from army_generator import get_possible_armies
+
+# todo make incremental?
 
 # process pool for multiprocessing
 __simulation_pool = None
@@ -171,7 +174,7 @@ def get_all_hits(rolling_army, receiving_army, is_attacking, is_first_strike, ro
 
 
 # apply losses
-def apply_losses(army_units, hits, is_attacking, loss_policy=loss_policies.default, keep_surviving_land=True):
+def apply_losses(army_units, hits, is_attacking, loss_policy=loss_policies.default, keep_surviving_land=False):
     return loss_policy(army_units, hits, is_attacking, keep_surviving_land)
 
 
@@ -216,7 +219,7 @@ def do_battle(attacking_army, defending_army, land_battle=True):
                                      and unit.can_bombard())
     bombardment_loss = dict()
     bombardment_loss[land_battle_units if land_battle else sea_battle_units] = bombardment_loss_count
-    apply_losses(defending_army, bombardment_loss, False, defender_loss_policy)
+    apply_losses(defending_army, bombardment_loss, False, defender_loss_policy, False)
     # remove bombardment units from army
     units_to_remove = []
     for unit in attacking_army.keys():
@@ -241,14 +244,14 @@ def do_battle(attacking_army, defending_army, land_battle=True):
         # first strike
         attacker_hits = get_all_hits(attacking_army, defending_army, True, True, round_of_combat)
         defending_army = apply_losses(defending_army, attacker_hits,
-                                      False, defender_loss_policy, attacking_land_must_survive)
+                                      False, defender_loss_policy, False)
         # normal combat
         attacker_hits = get_all_hits(attacking_army, defending_army, True, False, round_of_combat)
         defender_hits = get_all_hits(defending_army, attacking_army, False, False, round_of_combat)
         attacking_army = apply_losses(attacking_army, defender_hits,
                                       True, attacker_loss_policy, attacking_land_must_survive)
         defending_army = apply_losses(defending_army, attacker_hits,
-                                      False, defender_loss_policy, attacking_land_must_survive)
+                                      False, defender_loss_policy, False)
         round_of_combat += 1
 
     return [count_remaining_units(attacking_army) > 0,      # won
@@ -347,7 +350,7 @@ def do_all_possible_battles(attacker_money, defender_money, battle_count, land_b
         defender_armies = get_possible_armies(defender_money, land_battle, use_all_money)
     all_results = [[[] for _ in range(len(defender_armies))] for _ in range(len(attacker_armies))]
     global __simulation_pool
-    __simulation_pool = pool.Pool(initializer=init, initargs=(__total_results,))
+    __simulation_pool = pool.Pool(processes=number_of_processes, initializer=init, initargs=(__total_results,))
     import time
     start_time = time.time()
     for attacker_index, attacker_army in enumerate(attacker_armies):
@@ -371,7 +374,7 @@ def get_new_folder_name(attacker_money, defender_money, land_battle):
     version = None
     if os.path.isdir(base):
         version = 1
-        while os.path.isdir(base + "-" + str(i)):
+        while os.path.isdir(base + "-" + str(version)):
             version += 1
         base += "-" + str(version)
     return base, version

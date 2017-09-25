@@ -1,1 +1,18 @@
 Program to examine which distribution of units with fixed income is most likely to win a battle in tripleA
+
+Set simulation values in config.py
+
+Run army_generator.py to generate and save the possible unit distributions for 10, 50, 100, 150, 200, 250, 300, 350, 400
+    IPC amounts for land and sea battles
+
+Run battle_simulation.py to perform the battles between possible armies as specified in config.py
+    (If the list of possible armies hasn't been generated yet, also generate and save it)
+
+Run analysis.py to analyze the results of the battles for the configuration specified in config.py
+    (If the results and/or list of possible armies haven't been generated yet, also generate and save them)
+
+units.py defines the unit types and properties. New units can be added by adding an entry in the "units" dict.
+    Damaged versions of units with multiple hit points are generated automatically.
+
+loss_policies.py defines the different orders the AIs can choose to lose units.
+    Currently only one exists. More may be implemented in the future.

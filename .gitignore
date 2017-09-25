@@ -3,3 +3,5 @@ armies/
 results_*/
 *.xlsx
 possible_armies_*
+__pycache__/
+*.txt

@@ -1,8 +1,8 @@
 from units import Units
 
 
+# loss policy which applies the losses to units with least power in the current battle first
 def least_power(unit_list, hits, is_attacking, keep_surviving_land):
-    keep_surviving_land += 1  # just to keep the inspector quiet
     # todo respect surviving land setting
     # do unit-specific damage first
     to_remove = []

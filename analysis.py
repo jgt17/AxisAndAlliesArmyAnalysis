@@ -3,7 +3,7 @@ from statistics import mean, median
 import operator
 from PIL import Image
 
-from optimizer import get_folder_name, generate_and_save_all_battles
+from battle_simulation import get_folder_name, generate_and_save_all_battles
 from army_generator import get_possible_armies
 import config
 

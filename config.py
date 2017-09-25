@@ -12,19 +12,20 @@ defender_loss_policy = attacker_loss_policy
 retreat_after_round = -1
 retreat_when_x_units_left = -1
 retreat_when_only_air_left = False
-attacking_land_must_survive = True
+attacking_land_must_survive = True  # placeholder, not implemented yet
 is_land_battle = True
 
 low_luck = False
 
+# recommended setting is True. False generates orders of magnitude more possible configurations
 use_all_available_money = True
 
-# low values for debugging
-attacker_available_money = 10
+attacker_available_money = 75
 defender_available_money = attacker_available_money
-battle_simulation_count = 10000
+battle_simulation_count = 100
 
 
-threads_to_use = None
-if threads_to_use is None:
-    threads_to_use = cpu_count()*2
+# number of processes to use for battle simulation
+number_of_processes = None
+if number_of_processes is None:
+    number_of_processes = cpu_count()
