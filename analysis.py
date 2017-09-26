@@ -162,31 +162,39 @@ def do_and_save_all_analysis(attacker_money=None, defender_money=None, land_batt
 
     do_all_visualisation(results, folder_name)
     stats = do_all_stats(attacker_armies=attacker_armies, defender_armies=defender_armies, results=results)
+    summary = ""
+    for method in stats:
+        summary += (method[0].__name__.title() + ": \n")
+        for stat in method[1]:
+            summary += ("    " + stat[0].title() + ": \n")
+            summary += ("        Maximizing Attacker: " + str(stat[1][2]) + "\n")
+            summary += ("        Index:               " + str(stat[1][1]) + "\n")
+            method_name = method[0].__name__.title()
+            summary += ("        " + method_name + " Score:" + (" " * (14 - len(method_name))) + str(stat[1][0]) + "\n")
+            summary += ("        Min-max Defender:    " + str(stat[1][5]) + "\n")
+            summary += ("        Index:               " + str(stat[1][4]) + "\n")
+            summary += ("        " + method_name + " Score:" + (" " * (14 - len(method_name))) + str(stat[1][3]) + "\n\n")
     with open(folder_name + "/summary.txt", 'w', encoding="utf-8") as f:
-        for method in stats:
-            f.write(method[0].__name__.title() + ": \n")
-            for stat in method[1]:
-                f.write("    " + stat[0].title() + ": \n")
-                f.write("        Maximizing Attacker: " + str(stat[1][2]) + "\n")
-                f.write("        Index:               " + str(stat[1][1]) + "\n")
-                method_name = method[0].__name__.title()
-                f.write("        " + method_name + " Score:" + (" "*(14-len(method_name))) + str(stat[1][0]) + "\n")
-                f.write("        Min-max Defender:    " + str(stat[1][5]) + "\n")
-                f.write("        Index:               " + str(stat[1][4]) + "\n")
-                f.write("        " + method_name + " Score:" + (" "*(14-len(method_name))) + str(stat[1][3]) + "\n\n")
+        f.write(summary)
 
     # record army indices
+    armies_string = ""
+    for i, army in enumerate(attacker_armies):
+        armies_string += (str(i) + ": " + str(army) + "\n")
     if attacker_armies == defender_armies:
         with open(folder_name + "/army_indices.txt", 'w', encoding="utf-8") as f:
-            for i, army in enumerate(attacker_armies):
-                f.write(str(i) + ": " + str(army)+"\n")
+            f.write(armies_string)
     else:
+        attacker_armies_string = ""
+        for i, army in enumerate(attacker_armies):
+            attacker_armies_string += (str(i) + ": " + str(army) + "\n")
         with open(folder_name + "/attacker_army_indices.txt", 'w', encoding="utf-8") as f:
-            for i, army in enumerate(attacker_armies):
-                f.write(str(i) + ": " + str(army)+"\n")
+            f.write(attacker_armies_string)
+        defender_armies_string = ""
+        for i, army in enumerate(defender_armies):
+            defender_armies_string += (str(i) + ": " + str(army) + "\n")
         with open(folder_name + "/defender_army_indices.txt", 'w', encoding="utf-8") as f:
-            for i, army in enumerate(defender_armies):
-                f.write(str(i) + ": " + str(army)+"\n")
+            f.write(defender_armies_string)
 
 
 # remove entries for units whose count is zero from all army entries
