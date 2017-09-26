@@ -114,12 +114,12 @@ def visualize(results, results_property_name, folder_name):
 
 def do_all_stats(attacker_money=None, defender_money=None, land_battle=None,
                  results=None, attacker_armies=None, defender_armies=None):
-    aggregation_methods = [mean, median, min]
+    aggregation_methods = [mean, median, min, max]
     return [[method,
              [[stat,
                find_best(attacker_money=attacker_money, defender_money=defender_money, land_battle=land_battle,
                          results=results, attacker_armies=attacker_armies, defender_armies=defender_armies,
-                         results_property=list_of_stat_names.index(stat))]
+                         results_property=list_of_stat_names.index(stat), method_of_aggregation=method)]
               for stat in list_of_stat_names]]
             for method in aggregation_methods]
 
